@@ -64,12 +64,19 @@
 /// Response used when the query is malformed.
 #define RESPONSE_MALFORMED "MALFORMED"
 
+typedef char *(*Getter)();
+typedef bool (*Setter)(char *);
+
+struct Property
+{
+    const char *name;
+    Getter get;
+    Setter set;
+};
+
 template <size_t PROPERTY_COUNT> class CommunicationHandler
 {
   public:
-    typedef char *(*Getter)();
-    typedef bool (*Setter)(char *);
-
     /// Start the command handler using the supplied stream as a source.
     void begin(Stream *stream)
     {
@@ -135,22 +142,15 @@ template <size_t PROPERTY_COUNT> class CommunicationHandler
     }
 
     /// Define a property with handlers for retrieving and setting the value.
-    void attachProperty(const char *name, Getter get = nullptr, Setter set = nullptr)
+    void attachProperty(Property property)
     {
-        properties_[properties_size_] = Property{name, get, set};
+        properties_[properties_size_] = property;
     };
 
   private:
     struct Packet
     {
         char *property, *payload;
-    };
-
-    struct Property
-    {
-        const char *name;
-        Getter get;
-        Setter set;
     };
 
     Stream *stream_;
