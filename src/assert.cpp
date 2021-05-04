@@ -1,15 +1,14 @@
 #include <Arduino.h>
 #include <assert.h>
 
-#define SERIAL_FALLBACK_FREQUENCY 9600
-
-#define BLINK_DELAY 500
+static const uint32_t SERIAL_FALLBACK_FREQUENCY = 9600;
+static const uint32_t BLINK_DELAY = 500;
 
 void __assert(const char *__func, const char *__file, int __lineno, const char *__sexp)
 {
     if (!Serial)
     {
-        Serial.begin(9600);
+        Serial.begin(SERIAL_FALLBACK_FREQUENCY);
     }
 
     Serial.print(__file);
