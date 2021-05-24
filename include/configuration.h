@@ -1,6 +1,8 @@
 #ifndef _CONFIGURATION_H_
 #define _CONFIGURATION_H_
 
+// Gyroscope
+
 /// Gyroscope module X axis accelerometer offset.
 #define GYRO_OFFSET_ACCEL_X -1255
 /// Gyroscope module Y axis accelerometer offset.
@@ -20,6 +22,8 @@
 /// Gyroscope module i2c address.
 #define GYRO_ADDRESS 0x68
 
+// Motors
+
 /// Motor driver pin for running the left motor forward.
 #define PIN_MOTOR_L_FW 6
 /// Motor driver pin for running the left motor backwards.
@@ -29,6 +33,8 @@
 #define PIN_MOTOR_R_FW 10
 /// Motor driver pin for running the right motor backwards.
 #define PIN_MOTOR_R_BW 9
+
+// PID loops
 
 /// Sample period of the balancing PID loop.
 #define BALANCE_PID_SAMPLE_PERIOD 10
@@ -47,6 +53,31 @@
 #define VELOCITY_PID_KI 0.0
 /// Default derivative parameter of the velocity PID loop.
 #define VELOCITY_PID_KD 0.0
+
+// Encoders
+
+/// Number of encoder pulses for each motor revolution.
+#define ENCODER_PULSES_PER_REVOLUTION 8
+
+/// [ms] Sample period of the encoder.
+/// Please note that VELOCITY_PID_SAMPLE_PERIOD should be a multiple of ENCODER_SAMPLE_PERIOD.
+#define ENCODER_SAMPLE_PERIOD VELOCITY_PID_SAMPLE_PERIOD
+
+/// Arduino pin connected to the left encoder's A phase.
+#define PIN_ENCODER_L_A 2
+/// Arduino pin connected to the left encoder's B phase.
+#define PIN_ENCODER_L_B 4
+/// Logic level of the phase B pin when receiving a pulse on phase A while going forward.
+#define PIN_ENCODER_L_FW_LEVEL LOW
+
+/// Arduino pin connected to the right encoder's A phase.
+#define PIN_ENCODER_R_A 3
+/// Arduino pin connected to the right encoder's B phase.
+#define PIN_ENCODER_R_B 7
+/// Logic level of the phase B pin when receiving a pulse on phase A while going forward.
+#define PIN_ENCODER_R_FW_LEVEL HIGH
+
+// Startup
 
 /// [°] Maximum inclination where the loop will try to stablize.
 #define MAX_LEAN_ANGLE 40

@@ -22,16 +22,13 @@ Gyroscope gyroscope(GYRO_ADDRESS,
 Motor motor_left(PIN_MOTOR_L_FW, PIN_MOTOR_L_BW);
 Motor motor_right(PIN_MOTOR_R_FW, PIN_MOTOR_R_BW);
 
-Encoder encoder_left(PIN_ENCODER_L_A, PIN_ENCODER_L_B, PIN_ENCODER_L_FW_LEVEL);
-Encoder encoder_right(PIN_ENCODER_R_A, PIN_ENCODER_R_B, PIN_ENCODER_R_FW_LEVEL);
+Encoder encoder_left(ENCODER_SAMPLE_PERIOD, PIN_ENCODER_L_A, PIN_ENCODER_L_B, PIN_ENCODER_L_FW_LEVEL);
+Encoder encoder_right(ENCODER_SAMPLE_PERIOD, PIN_ENCODER_R_A, PIN_ENCODER_R_B, PIN_ENCODER_R_FW_LEVEL);
 
 CommunicationManager comm_manager;
 
 PIDController balance_loop(BALANCE_PID_SAMPLE_PERIOD, static_cast<double>(INT8_MIN), static_cast<double>(INT8_MAX));
 PIDController velocity_loop(VELOCITY_PID_SAMPLE_PERIOD, -MAX_WORKING_ANGLE_RAD, MAX_WORKING_ANGLE_RAD, false);
-
-bool starting_, started_ = false;
-uint32_t start_timestamp_;
 
 Handler handlers[] = {
     Handler{
@@ -42,6 +39,18 @@ Handler handlers[] = {
                 double speed = stringToDouble(buffer);
                 if (isnan(speed)) return true;
                 velocity_loop.setTarget(speed);
+                return false;
+            },
+    },
+
+    Handler{
+        .name = "d",
+        .get = nullptr,
+        .set =
+            [](char *buffer) {
+                double dir = stringToDouble(buffer);
+                if (isnan(dir)) return true;
+                velocity_loop.setTarget(dir);
                 return false;
             },
     },
@@ -206,19 +215,11 @@ void setup()
     velocity_loop.enable();
 }
 
-void loop()
+void setStartedStopped(float angle)
 {
-    comm_manager.tick();
-    gyroscope.tick();
+    static bool starting_, started_ = false;
+    static uint32_t start_timestamp_;
 
-    encoder_left.tick();
-    encoder_right.tick();
-
-    float speed_l = encoder_left.getFrequency();
-    float speed_r = encoder_right.getFrequency();
-    float speed_avg = (speed_l + speed_r) / 2;
-
-    float angle = gyroscope.getAngle();
     float abs_angle = abs(angle);
 
     if (abs_angle > MAX_LEAN_ANGLE_RAD && started_)
@@ -248,13 +249,54 @@ void loop()
             started_ = true;
         }
     }
+}
 
-    if (velocity_loop.compute(speed_avg))
+void setDesiredAngle()
+{
+    static bool encoder_l_ready, encoder_r_ready = false;
+
+    if (!encoder_l_ready)
     {
-        balance_loop.setTarget(velocity_loop.getOutput());
+        encoder_l_ready = encoder_left.tick();
     }
 
-    balance_loop.compute(angle);
-    motor_left.setDuty(balance_loop.getOutput());
-    motor_right.setDuty(balance_loop.getOutput());
+    if (!encoder_r_ready)
+    {
+        encoder_r_ready = encoder_right.tick();
+    }
+
+    if (encoder_l_ready && encoder_r_ready)
+    {
+        float speed_l = encoder_left.getFrequency();
+        float speed_r = encoder_right.getFrequency();
+        float speed_avg = (speed_l + speed_r) / 2;
+
+        if (velocity_loop.compute(speed_avg))
+        {
+            balance_loop.setTarget(velocity_loop.getOutput());
+            encoder_l_ready = false;
+            encoder_r_ready = false;
+        }
+    }
+}
+
+void setDesiredDuty(float angle)
+{
+    if (balance_loop.compute(angle))
+    {
+        motor_left.setDuty(balance_loop.getOutput());
+        motor_right.setDuty(balance_loop.getOutput());
+    }
+}
+
+void loop()
+{
+    comm_manager.tick();
+    gyroscope.tick();
+
+    float angle = gyroscope.getAngle();
+
+    setDesiredAngle();
+    setDesiredDuty(angle);
+    setStartedStopped(angle);
 }
